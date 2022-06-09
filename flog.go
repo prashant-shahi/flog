@@ -130,6 +130,8 @@ func NewLog(format string, t time.Time) string {
 		return NewCommonLogFormat(t)
 	case "json":
 		return NewJSONLogFormat(t)
+	case "json_with_trace":
+		return NewJSONLogFormatWithTrace(t)
 	default:
 		return ""
 	}
