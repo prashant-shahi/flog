@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit"
+	"github.com/openzipkin/zipkin-go/idgenerator"
 )
 
 const (
@@ -137,6 +138,8 @@ func NewJSONLogFormat(t time.Time) string {
 
 // NewJSONLogFormatWithTrace creates a log string with json log format
 func NewJSONLogFormatWithTrace(t time.Time) string {
+	g := idgenerator.NewRandom128()
+	traceId := g.TraceID()
 	return fmt.Sprintf(
 		JSONLogFormatWithTrace,
 		gofakeit.IPv4Address(),
@@ -148,7 +151,7 @@ func NewJSONLogFormatWithTrace(t time.Time) string {
 		gofakeit.StatusCode(),
 		gofakeit.Number(0, 30000),
 		gofakeit.URL(),
-		gofakeit.UUID(),
-		gofakeit.UUID(),
+		traceId.String(),
+		g.SpanID(traceId).String(),
 	)
 }
