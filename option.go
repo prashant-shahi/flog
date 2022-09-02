@@ -34,6 +34,7 @@ Options:
   -n, --number integer     number of lines to generate.
   -b, --bytes integer      size of logs to generate (in bytes).
                            "bytes" will be ignored when "number" is set.
+  -k,--log-bytes integer size of each log line in bytes. ( > 350)
   -s, --sleep duration     fix creation time interval for each log (default unit "seconds"). It does not actually sleep.
                            examples: 10, 20ms, 5s, 1m
   -d, --delay duration     delay log generation speed (default unit "seconds").
@@ -50,16 +51,17 @@ var validTypes = []string{"stdout", "log", "gz"}
 
 // Option defines log generator options
 type Option struct {
-	Format    string
-	Output    string
-	Type      string
-	Number    int
-	Bytes     int
-	Sleep     time.Duration
-	Delay     time.Duration
-	SplitBy   int
-	Overwrite bool
-	Forever   bool
+	Format       string
+	Output       string
+	Type         string
+	Number       int
+	Bytes        int
+	LogLineBytes int
+	Sleep        time.Duration
+	Delay        time.Duration
+	SplitBy      int
+	Overwrite    bool
+	Forever      bool
 }
 
 func init() {
@@ -81,16 +83,17 @@ func errorExit(err error) {
 
 func defaultOptions() *Option {
 	return &Option{
-		Format:    "apache_common",
-		Output:    "generated.log",
-		Type:      "stdout",
-		Number:    1000,
-		Bytes:     0,
-		Sleep:     0.0,
-		Delay:     0.0,
-		SplitBy:   0,
-		Overwrite: false,
-		Forever:   false,
+		Format:       "apache_common",
+		Output:       "generated.log",
+		Type:         "stdout",
+		Number:       1000,
+		Bytes:        0,
+		Sleep:        0.0,
+		Delay:        0.0,
+		SplitBy:      0,
+		LogLineBytes: 350,
+		Overwrite:    false,
+		Forever:      false,
 	}
 }
 
@@ -121,6 +124,14 @@ func ParseNumber(lines int) (int, error) {
 // ParseBytes validates the given bytes
 func ParseBytes(bytes int) (int, error) {
 	if bytes < 0 {
+		return 0, errors.New("bytes can not be negative")
+	}
+	return bytes, nil
+}
+
+// ParseLogLineBytes validates the given bytes
+func ParseLogLineBytes(bytes int) (int, error) {
+	if bytes < 350 {
 		return 0, errors.New("bytes can not be negative")
 	}
 	return bytes, nil
@@ -177,6 +188,7 @@ func ParseOptions() *Option {
 	logType := pflag.StringP("type", "t", opts.Type, "Log output type")
 	number := pflag.IntP("number", "n", opts.Number, "Number of lines to generate")
 	bytes := pflag.IntP("bytes", "b", opts.Bytes, "Size of logs to generate. (in bytes)")
+	logLineBytes := pflag.IntP("log-bytes", "k", opts.LogLineBytes, "Size of each log line to generate. (in bytes) (>= 350)")
 	sleepString := pflag.StringP("sleep", "s", "0s", "Creation time interval (default unit: seconds)")
 	delayString := pflag.StringP("delay", "d", "0s", "Log generation speed (default unit: seconds)")
 	splitBy := pflag.IntP("split", "p", opts.SplitBy, "Maximum number of lines or size of a log file")
@@ -203,6 +215,9 @@ func ParseOptions() *Option {
 		errorExit(err)
 	}
 	if opts.Bytes, err = ParseBytes(*bytes); err != nil {
+		errorExit(err)
+	}
+	if opts.LogLineBytes, err = ParseLogLineBytes(*logLineBytes); err != nil {
 		errorExit(err)
 	}
 	if opts.Sleep, err = ParseSleep(*sleepString); err != nil {
