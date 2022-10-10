@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
 	"github.com/brianvoe/gofakeit"
 	"github.com/openzipkin/zipkin-go/idgenerator"
+	"github.com/tjarratt/babble"
 )
 
 const (
@@ -142,19 +142,14 @@ func NewJSONLogFormat(t time.Time) string {
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ _-")
 
-func randSeq(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
+var babbler = babble.NewBabbler()
 
 // NewJSONLogFormatWithTrace creates a log string with json log format
 func NewJSONLogFormatWithTrace(lineBytes int, t time.Time) string {
 	g := idgenerator.NewRandom128()
 	traceId := g.TraceID()
-
+	babbler.Separator = " "
+	babbler.Count = 100
 	if lineBytes > 350 {
 		// taking the default log to be about 350 bytes
 		return fmt.Sprintf(
@@ -170,7 +165,7 @@ func NewJSONLogFormatWithTrace(lineBytes int, t time.Time) string {
 			gofakeit.URL(),
 			traceId.String(),
 			g.SpanID(traceId).String(),
-			randSeq(lineBytes-350),
+			babbler.Babble(),
 		)
 	}
 
