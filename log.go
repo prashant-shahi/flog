@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit"
+	"github.com/openzipkin/zipkin-go/idgenerator"
+	"github.com/tjarratt/babble"
 )
 
 const (
@@ -23,6 +25,12 @@ const (
 	CommonLogFormat = "%s - %s [%s] \"%s %s %s\" %d %d"
 	// JSONLogFormat : {"host": "{host}", "user-identifier": "{user-identifier}", "datetime": "{datetime}", "method": "{method}", "request": "{request}", "protocol": "{protocol}", "status", {status}, "bytes": {bytes}, "referer": "{referer}"}
 	JSONLogFormat = `{"host":"%s", "user-identifier":"%s", "datetime":"%s", "method": "%s", "request": "%s", "protocol":"%s", "status":%d, "bytes":%d, "referer": "%s"}`
+
+	// JSONLogFormatWithTrace = {"host": "{host}", "user-identifier": "{user-identifier}", "datetime": "{datetime}", "method": "{method}", "request": "{request}", "protocol": "{protocol}", "status", {status}, "bytes": {bytes}, "referer": "{referer}"}
+	JSONLogFormatWithTrace = `{"host":"%s", "user-identifier":"%s", "datetime":"%s", "method": "%s", "request": "%s", "protocol":"%s", "status":%d, "bytes":%d, "referer": "%s", "traceId": "%s", "spanId": "%s"}`
+
+	// Extra
+	JSONLogFormatWithTraceExtraBytes = `{"host":"%s", "user-identifier":"%s", "datetime":"%s", "method": "%s", "request": "%s", "protocol":"%s", "status":%d, "bytes":%d, "referer": "%s", "traceId": "%s", "spanId": "%s", "dummyBytes": "%s"}`
 )
 
 // NewApacheCommonLog creates a log string with apache common log format
@@ -129,5 +137,50 @@ func NewJSONLogFormat(t time.Time) string {
 		gofakeit.StatusCode(),
 		gofakeit.Number(0, 30000),
 		gofakeit.URL(),
+	)
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ _-")
+
+var babbler = babble.NewBabbler()
+
+// NewJSONLogFormatWithTrace creates a log string with json log format
+func NewJSONLogFormatWithTrace(lineBytes int, t time.Time) string {
+	g := idgenerator.NewRandom128()
+	traceId := g.TraceID()
+	babbler.Separator = " "
+	babbler.Count = 100
+	if lineBytes > 350 {
+		// taking the default log to be about 350 bytes
+		return fmt.Sprintf(
+			JSONLogFormatWithTraceExtraBytes,
+			gofakeit.IPv4Address(),
+			RandAuthUserID(),
+			t.Format(ClickHouse),
+			gofakeit.HTTPMethod(),
+			RandResourceURI(),
+			RandHTTPVersion(),
+			gofakeit.StatusCode(),
+			gofakeit.Number(0, 30000),
+			gofakeit.URL(),
+			traceId.String(),
+			g.SpanID(traceId).String(),
+			babbler.Babble(),
+		)
+	}
+
+	return fmt.Sprintf(
+		JSONLogFormatWithTrace,
+		gofakeit.IPv4Address(),
+		RandAuthUserID(),
+		t.Format(ClickHouse),
+		gofakeit.HTTPMethod(),
+		RandResourceURI(),
+		RandHTTPVersion(),
+		gofakeit.StatusCode(),
+		gofakeit.Number(0, 30000),
+		gofakeit.URL(),
+		traceId.String(),
+		g.SpanID(traceId).String(),
 	)
 }
